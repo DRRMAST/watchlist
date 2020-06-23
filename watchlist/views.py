@@ -4,7 +4,7 @@ from flask_login import login_user, login_required, logout_user, current_user
 from watchlist import app, db
 from watchlist.models import User, Movie
 
-
+'''
 @app.route('/login', methods=['GET', 'POST'])
 def login():
 	if request.method == 'POST':
@@ -28,6 +28,35 @@ def login():
 		return redirect(url_for('login'))
 		
 	return render_template('login.html')
+'''
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+	if request.method == 'POST':
+		username = request.form['username']
+		password = request.form['password']
+		
+		if not username or not password:
+			flash('Invalid input.')
+			return redirect(url_for('login'))
+			
+		#user = User.query.first()
+		user = User.query.filter_by(username=username).first()
+		if not user:
+			flash('no user')
+			return redirect(url_for('login'))
+		if username == user.username and user.validate_password(password):
+			login_user(user)
+			flash('Login success')
+			print('Login success')
+			return redirect(url_for('index'))
+			
+		flash('Invalid username or password.')
+		print('Invalid input')
+		return redirect(url_for('login'))
+		
+	return render_template('login.html')
+
+
 
 @app.route('/logout')
 @login_required
@@ -35,6 +64,27 @@ def logout():
 	logout_user()
 	flash('Goodbye.')
 	return redirect(url_for('index'))
+
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+	if request.method == 'POST':
+		username = request.form['username']
+		password = request.form['password']
+		password_again = request.form['password_again']
+		
+		if not username or not password or not password_again or password != password_again:
+			flash('Invalid input')
+			return redirect(url_for('register'))
+			
+		user = User(username=username)
+		user.set_password(password)
+		db.session.add(user)
+		db.session.commit()
+		return redirect(url_for('login'))
+		
+	return render_template('register.html')
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -47,13 +97,19 @@ def index():
 		if not title or not year or len(year) > 4 or len(title) > 60:
 			flash('Invalid input.')
 			return redirect(url_for('index'))
-		movie = Movie(title=title, year=year)
+		movie = Movie(title=title, year=year, user=current_user._get_current_object())
 		db.session.add(movie)
 		db.session.commit()
 		flash('Item created.')
 		return redirect(url_for('index'))
-	user = User.query.first()
-	movies = Movie.query.all()
+	
+	if current_user.is_authenticated:
+		user = current_user
+		print(current_user)
+		movies = Movie.query.join(User, Movie.user_id==current_user.id).all()
+	else:
+		user = User.query.first()
+		movies = Movie.query.all()
 	return render_template('index.html', user=user, movies=movies)
     
 

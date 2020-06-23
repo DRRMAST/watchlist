@@ -40,7 +40,7 @@ def forge():
 		{'title': 'The Pork of Music', 'year': '2012'},
 	]
 	
-	user = User(name=name)
+	user = User(username=name)
 	db.session.add(user)
 	for m in movies:
 		movie = Movie(title=m['title'], year=m['year'])
